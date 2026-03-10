@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QE Exam Scheduling</title>
+<title>Oral Qualifying Exam Scheduling - Xiao</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -136,7 +136,6 @@
   .prof-cell .others-count {
     position: absolute; top: 2px; right: 3px;
     font-size: .65rem; font-weight: 700; color: #777;
-    pointer-events: none;
   }
   .prof-cell.available .others-count { color: rgba(255,255,255,.85); }
   /* Subtle background tint when others are available */
@@ -185,7 +184,26 @@
   .slot-time { color: #555; min-width: 120px; }
   .slot-profs { color: #777; font-size: .82rem; }
 
-  /* ---------- Tooltip ---------- */
+  /* ---------- Info panel (right of table) ---------- */
+  .prof-layout { display: flex; align-items: flex-start; gap: 0; }
+  .prof-layout .grid-container { flex: 1; min-width: 0; }
+  .info-panel {
+    width: 220px; min-width: 220px; max-height: 500px;
+    background: #fff; border: 2px solid #c8e6c9; border-radius: 12px;
+    padding: 16px; margin: 16px 24px 16px 0;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    font-size: .88rem; position: sticky; top: 16px;
+  }
+  .info-panel h3 { font-size: .95rem; color: #1b5e20; margin-bottom: 8px; border-bottom: 2px solid #c8e6c9; padding-bottom: 6px; }
+  .info-panel .ip-slot { font-weight: 700; color: #333; margin-bottom: 6px; }
+  .info-panel .ip-time { color: #555; margin-bottom: 10px; font-size: .84rem; }
+  .info-panel .ip-names { line-height: 1.7; }
+  .info-panel .ip-name { display: flex; align-items: center; gap: 6px; padding: 3px 0; }
+  .info-panel .ip-dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
+  .info-panel .ip-dot.xiao { background: #1b5e20; }
+  .info-panel .ip-empty { color: #999; font-style: italic; }
+
+  /* Hide old floating tooltip in prof view, keep for admin */
   .cell-tooltip {
     display: none; position: fixed;
     background: #fff; border: 1px solid #c8e6c9; border-radius: 8px;
@@ -218,8 +236,8 @@
 <!-- ==================== LOGIN ==================== -->
 <div id="view-login" class="view login-wrapper active">
   <div class="login-card">
-    <h1>QE Exam Scheduling</h1>
-    <p class="subtitle">Select your available time slots for the Qualifying Exam</p>
+    <h1>Oral Qualifying Exam</h1>
+    <p class="subtitle">Schedule the Oral Qualifying Exam for Xiao</p>
 
     <div class="role-toggle">
       <label><input type="radio" name="role" value="professor" checked><span>Professor</span></label>
@@ -246,9 +264,17 @@
     <h2 id="prof-welcome">Welcome</h2>
     <button class="btn-logout" onclick="logout()">Log Out</button>
   </div>
-  <p class="instructions">Click on time slots when you are available. <span style="color:#4caf50;font-weight:700">Green = your available.</span> Numbers show how many others are also available. Drag to select multiple cells.</p>
-  <div class="grid-container">
-    <table class="schedule-table" id="prof-table"></table>
+  <p class="instructions">Click on time slots when you are available. <span style="color:#4caf50;font-weight:700">Green = available.</span> Hover a slot to see details on the right. <b>3 professors</b> in this committee.<br><span style="color:#1b5e20;font-style:italic">Note: Xiao is available for all time slots.</span></p>
+  <div class="prof-layout">
+    <div class="grid-container">
+      <table class="schedule-table" id="prof-table"></table>
+    </div>
+    <div class="info-panel" id="info-panel">
+      <h3>Slot Details</h3>
+      <div id="ip-content">
+        <p class="ip-empty">Hover over a time slot to see who is available.</p>
+      </div>
+    </div>
   </div>
   <div class="save-bar">
     <button class="btn-save" id="btn-save">Save Availability</button>
@@ -464,6 +490,38 @@ function buildProfTable() {
       if (cell) toggleProfCell(cell, dragValue);
     }, { passive: true });
     document.addEventListener('touchend', () => { isDragging = false; });
+
+    // Hover on cell to update the info panel on the right
+    table.addEventListener('mouseover', e => {
+      if (isDragging) return;
+      const cell = e.target.closest('.prof-cell');
+      if (!cell) return;
+      const sid = cell.dataset.slot;
+      const datePart = sid.substring(0, 10);
+      const hourPart = parseInt(sid.substring(11), 10);
+      const info = othersData[sid];
+      const others = info ? info.names : [];
+
+      const COMMITTEE_SIZE = 3;
+      let html = '<div class="ip-slot">' + formatDateNice(datePart) + '</div>';
+      html += '<div class="ip-time">' + formatTimeRange(hourPart) + '</div>';
+      html += '<div class="ip-names">';
+      html += '<div class="ip-name"><span class="ip-dot xiao"></span> Xiao (always available)</div>';
+      if (others.length > 0) {
+        others.forEach(n => {
+          html += '<div class="ip-name"><span class="ip-dot"></span> ' + n + '</div>';
+        });
+      } else {
+        html += '<div class="ip-name" style="color:#999">No other professors yet</div>';
+      }
+      html += '</div>';
+      if (others.length >= COMMITTEE_SIZE) {
+        html += '<div style="margin-top:10px;padding:8px;background:#e8f5e9;border-radius:6px;color:#1b5e20;font-weight:700;text-align:center">All committee members available!</div>';
+      } else {
+        html += '<div style="margin-top:10px;color:#777;font-size:.82rem">' + others.length + ' / ' + COMMITTEE_SIZE + ' professors available</div>';
+      }
+      document.getElementById('ip-content').innerHTML = html;
+    });
   }
 }
 
@@ -626,7 +684,7 @@ function buildAdminTable(data) {
     const datePart = sid.substring(0, 10);
     const hourPart = parseInt(sid.substring(11), 10);
     tooltip.querySelector('.tt-title').textContent = formatDateNice(datePart) + ', ' + formatTimeRange(hourPart);
-    tooltip.querySelector('.tt-list').textContent = cell.dataset.names || 'None';
+    tooltip.querySelector('.tt-list').textContent = 'Xiao (available), ' + (cell.dataset.names || 'None');
     tooltip.style.display = 'block';
 
     const rect = cell.getBoundingClientRect();

@@ -304,6 +304,16 @@ function handleGetAllPublic(body) {
  * B1 onward = slot IDs).  Safe to re-run: it only writes headers into
  * row 1 and will not overwrite professor data in row 2+.
  */
+/**
+ * Run this to fully reset — deletes all professor data and re-creates headers.
+ */
+function resetSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(AVAILABILITY_SHEET);
+  if (sheet) ss.deleteSheet(sheet);
+  initSheet();
+}
+
 function initSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(AVAILABILITY_SHEET);
