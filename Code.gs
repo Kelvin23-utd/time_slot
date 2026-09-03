@@ -1,6 +1,7 @@
 // ============================================================
-// QE Scheduling — Google Apps Script Backend
+// Time Slot Booking — Google Apps Script Backend
 // Deploy as Web App (Execute as: me, Access: Anyone)
+// NOTE: DATES / HOURS here MUST match the same constants in index.html.
 // ============================================================
 
 // --------------- Constants ---------------
@@ -119,7 +120,7 @@ function handleLogin(body) {
 }
 
 function handleGetAvailability(body) {
-  // No password required for professors
+  // No password required for guests
   var name = (body.name || "").trim();
   if (!name) {
     return { success: false, error: "Name is required." };
@@ -141,7 +142,7 @@ function handleGetAvailability(body) {
     slotCol[String(headers[c]).trim()] = c;
   }
 
-  // Find professor row (case-insensitive, trimmed)
+  // Find this guest's row (case-insensitive, trimmed)
   var nameLower = name.toLowerCase();
   var rowData = null;
   for (var r = 1; r < data.length; r++) {
@@ -165,7 +166,7 @@ function handleGetAvailability(body) {
 }
 
 function handleSaveAvailability(body) {
-  // No password required for professors
+  // No password required for guests
 
   var name = (body.name || "").trim();
   if (!name) {
@@ -190,7 +191,7 @@ function handleSaveAvailability(body) {
     slotCol[String(headers[c]).trim()] = c;
   }
 
-  // Find existing professor row (case-insensitive)
+  // Find this guest's existing row (case-insensitive)
   var nameLower = name.toLowerCase();
   var profRow = -1; // 0-based index in data[]
   for (var r = 1; r < data.length; r++) {
@@ -228,7 +229,7 @@ function handleGetAll(body) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(AVAILABILITY_SHEET);
   if (!sheet) {
-    return { success: true, professors: [] };
+    return { success: true, professors: [] }; // key kept as "professors" for API compatibility
   }
 
   var allSlots = getAllSlotIds();
@@ -261,11 +262,11 @@ function handleGetAll(body) {
 }
 
 function handleGetAllPublic(body) {
-  // No password required — professors can see each other's availability
+  // No password required — guests can see each other's picks
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(AVAILABILITY_SHEET);
   if (!sheet) {
-    return { success: true, professors: [] };
+    return { success: true, professors: [] }; // key kept as "professors" for API compatibility
   }
 
   var allSlots = getAllSlotIds();
@@ -300,12 +301,12 @@ function handleGetAllPublic(body) {
 
 /**
  * Run this function once from the Apps Script editor to create the
- * "Availability" sheet with the 88 time-slot headers (A1 = "Professor",
+ * "Availability" sheet with the 88 time-slot headers (A1 = "Name",
  * B1 onward = slot IDs).  Safe to re-run: it only writes headers into
- * row 1 and will not overwrite professor data in row 2+.
+ * row 1 and will not overwrite guest bookings in row 2+.
  */
 /**
- * Run this to fully reset — deletes all professor data and re-creates headers.
+ * Run this to fully reset — deletes ALL guest bookings and re-creates headers.
  */
 function resetSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -322,7 +323,7 @@ function initSheet() {
   }
 
   var allSlots = getAllSlotIds();
-  var headerRow = ["Professor"].concat(allSlots);
+  var headerRow = ["Name"].concat(allSlots);
 
   // Write the entire header row at once
   sheet.getRange(1, 1, 1, headerRow.length).setValues([headerRow]);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Oral Qualifying Exam Scheduling - Xiao</title>
+<title>Book a Time Slot</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -40,67 +40,54 @@
     font-size: .95rem; font-weight: 500;
     box-shadow: 0 4px 16px rgba(0,0,0,.18);
     opacity: 0; transition: all .35s ease;
-    z-index: 10000; white-space: nowrap;
+    z-index: 10000; white-space: nowrap; max-width: 92vw;
+    overflow: hidden; text-overflow: ellipsis;
   }
   #toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
   #toast.error { background: #c62828; }
 
-  /* ---------- Login ---------- */
-  .login-wrapper {
-    display: flex; justify-content: center; align-items: center;
-    min-height: 100vh; padding: 24px;
-  }
-  .login-card {
-    background: #fff; border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0,0,0,.08);
-    padding: 48px 40px; width: 100%; max-width: 420px;
-    text-align: center;
-  }
-  .login-card h1 { font-size: 1.7rem; color: #1b5e20; margin-bottom: 6px; }
-  .login-card .subtitle { color: #666; font-size: .92rem; margin-bottom: 32px; }
-  .role-toggle { display: flex; gap: 0; margin-bottom: 24px; border-radius: 8px; overflow: hidden; border: 2px solid #c8e6c9; }
-  .role-toggle label {
-    flex: 1; padding: 10px 0; cursor: pointer;
-    font-weight: 600; font-size: .9rem; color: #555;
-    transition: all .2s;
-  }
-  .role-toggle input { display: none; }
-  .role-toggle input:checked + span { background: #2e7d32; color: #fff; display: block; padding: 10px 0; margin: -10px 0; }
-  .role-toggle span { display: block; padding: 10px 0; margin: -10px 0; transition: all .2s; }
-  .form-group { margin-bottom: 16px; text-align: left; }
-  .form-group label { display: block; font-size: .82rem; font-weight: 600; color: #555; margin-bottom: 5px; }
-  .form-group input {
-    width: 100%; padding: 10px 14px; border: 2px solid #e0e0e0; border-radius: 8px;
-    font-size: .95rem; transition: border-color .2s; outline: none;
-  }
-  .form-group input:focus { border-color: #4caf50; }
-  .btn-login {
-    width: 100%; padding: 12px; margin-top: 8px;
-    background: #2e7d32; color: #fff; border: none; border-radius: 8px;
-    font-size: 1rem; font-weight: 600; cursor: pointer;
-    transition: background .2s;
-  }
-  .btn-login:hover { background: #1b5e20; }
-  .login-error { color: #c62828; font-size: .85rem; margin-top: 12px; min-height: 20px; }
-
-  /* ---------- App shell ---------- */
+  /* ---------- Header: name + Book ---------- */
   .app-header {
     background: #fff; border-bottom: 1px solid #e0e0e0;
-    padding: 16px 32px; display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 24px;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 20;
   }
-  .app-header h2 { font-size: 1.15rem; color: #1b5e20; }
-  .btn-logout {
+  .app-header h1 { font-size: 1.2rem; color: #1b5e20; white-space: nowrap; }
+  .name-form { display: flex; gap: 8px; align-items: center; flex: 1; justify-content: flex-end; min-width: 260px; }
+  .name-form input {
+    flex: 1; max-width: 320px; min-width: 140px;
+    padding: 10px 14px; border: 2px solid #e0e0e0; border-radius: 8px;
+    font-size: 1rem; outline: none; transition: border-color .2s;
+  }
+  .name-form input:focus { border-color: #4caf50; }
+  .btn-book {
+    background: #2e7d32; color: #fff; border: none; border-radius: 8px;
+    padding: 11px 28px; font-size: 1rem; font-weight: 700;
+    cursor: pointer; transition: background .2s; white-space: nowrap;
+    box-shadow: 0 3px 10px rgba(46,125,50,.25);
+  }
+  .btn-book:hover { background: #1b5e20; }
+  .btn-secondary {
     background: none; border: 2px solid #c8e6c9; border-radius: 8px;
     padding: 7px 18px; font-size: .85rem; font-weight: 600; color: #2e7d32;
     cursor: pointer; transition: all .2s;
   }
-  .btn-logout:hover { background: #e8f5e9; }
-  .instructions { text-align: center; padding: 18px 24px 4px; color: #666; font-size: .9rem; }
+  .btn-secondary:hover { background: #e8f5e9; }
+
+  .btn-book:disabled { background: #a5d6a7; cursor: not-allowed; box-shadow: none; }
+  .no-dates {
+    max-width: 520px; margin: 24px auto; padding: 28px 24px; text-align: center;
+    background: #fff; border: 2px dashed #c8e6c9; border-radius: 12px;
+    color: #666; font-size: 1rem;
+  }
+  .instructions { text-align: center; padding: 16px 24px 4px; color: #666; font-size: .9rem; line-height: 1.5; }
+  .legend-green { color: #2e7d32; font-weight: 700; }
+  .my-status { text-align: center; color: #1b5e20; font-size: .85rem; min-height: 20px; padding: 4px 24px 0; }
 
   /* ---------- Grid ---------- */
-  .grid-container {
-    padding: 16px 24px 24px; overflow-x: auto;
-  }
+  .layout { display: flex; align-items: flex-start; gap: 0; }
+  .grid-container { flex: 1; min-width: 0; padding: 16px 24px 24px; overflow-x: auto; }
   .schedule-table {
     border-collapse: separate; border-spacing: 0;
     margin: 0 auto; border-radius: 10px; overflow: hidden;
@@ -113,7 +100,6 @@
     background: #f1f8e9; padding: 10px 6px;
     font-size: .78rem; font-weight: 700; color: #33691e;
     white-space: pre-line; min-width: 72px;
-    position: sticky; top: 0; z-index: 2;
   }
   .schedule-table th:first-child { min-width: 110px; position: sticky; left: 0; z-index: 3; }
   .schedule-table td:first-child {
@@ -122,58 +108,60 @@
     position: sticky; left: 0; z-index: 1;
   }
 
-  /* Professor cells */
-  .prof-cell {
+  /* Slot cells (booking view) */
+  .slot-cell {
     min-width: 68px; height: 48px; cursor: pointer;
     transition: background .15s, box-shadow .15s;
-    user-select: none; -webkit-user-select: none;
-    position: relative;
+    user-select: none; -webkit-user-select: none; touch-action: manipulation;
+    position: relative; background: #fafafa;
   }
-  .prof-cell:hover { box-shadow: inset 0 0 0 2px #81c784; }
-  .prof-cell.available { background: #4caf50; color: #fff; }
-  .prof-cell.unavailable { background: #fafafa; }
-  /* Others' availability indicator */
-  .prof-cell .others-count {
-    position: absolute; top: 2px; right: 3px;
-    font-size: .65rem; font-weight: 700; color: #777;
+  .slot-cell:hover { box-shadow: inset 0 0 0 2px #81c784; }
+  .slot-cell.mine { background: #4caf50; color: #fff; }
+  .slot-cell .others-count {
+    position: absolute; top: 2px; right: 4px;
+    font-size: .68rem; font-weight: 700; color: #777;
   }
-  .prof-cell.available .others-count { color: rgba(255,255,255,.85); }
-  /* Subtle background tint when others are available */
-  .prof-cell.others-1 { background: #f1f8e9; }
-  .prof-cell.others-2 { background: #dcedc8; }
-  .prof-cell.others-3 { background: #c5e1a5; }
-  .prof-cell.available.others-1,
-  .prof-cell.available.others-2,
-  .prof-cell.available.others-3 { background: #4caf50; }
+  .slot-cell.mine .others-count { color: rgba(255,255,255,.9); }
+  .slot-cell.others-1 { background: #f1f8e9; }
+  .slot-cell.others-2 { background: #dcedc8; }
+  .slot-cell.others-3 { background: #c5e1a5; }
+  .slot-cell.mine.others-1, .slot-cell.mine.others-2, .slot-cell.mine.others-3 { background: #4caf50; }
 
   /* Admin cells */
   .admin-cell {
-    min-width: 68px; height: 48px; cursor: pointer;
+    min-width: 68px; height: 48px; cursor: default;
     transition: background .15s; position: relative;
     font-size: .9rem; font-weight: 700; color: #1b5e20;
   }
   .admin-cell.count-0 { background: #f5f5f5; color: #bbb; }
-  .admin-cell.full-consensus { box-shadow: inset 0 0 0 3px #ffd600; }
-  .admin-cell.full-consensus::after {
+  .admin-cell.everyone { box-shadow: inset 0 0 0 3px #ffd600; }
+  .admin-cell.everyone::after {
     content: '\2605'; position: absolute; top: 2px; right: 4px;
     font-size: .6rem; color: #f9a825;
   }
 
-  /* ---------- Save button ---------- */
-  .save-bar { text-align: center; padding: 8px 0 32px; }
-  .btn-save {
-    background: #2e7d32; color: #fff; border: none; border-radius: 10px;
-    padding: 13px 48px; font-size: 1rem; font-weight: 700;
-    cursor: pointer; transition: background .2s;
-    box-shadow: 0 3px 10px rgba(46,125,50,.25);
+  /* ---------- Info panel (right of table) ---------- */
+  .info-panel {
+    width: 220px; min-width: 220px; max-height: 500px; overflow-y: auto;
+    background: #fff; border: 2px solid #c8e6c9; border-radius: 12px;
+    padding: 16px; margin: 16px 24px 16px 0;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    font-size: .88rem; position: sticky; top: 80px;
   }
-  .btn-save:hover { background: #1b5e20; }
+  .info-panel h3 { font-size: .95rem; color: #1b5e20; margin-bottom: 8px; border-bottom: 2px solid #c8e6c9; padding-bottom: 6px; }
+  .info-panel .ip-slot { font-weight: 700; color: #333; margin-bottom: 4px; }
+  .info-panel .ip-time { color: #555; margin-bottom: 10px; font-size: .84rem; }
+  .info-panel .ip-name { display: flex; align-items: center; gap: 6px; padding: 3px 0; }
+  .info-panel .ip-dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
+  .info-panel .ip-dot.me { background: #1b5e20; }
+  .info-panel .ip-empty { color: #999; font-style: italic; }
+  .info-panel .ip-none { color: #999; }
 
-  /* ---------- Admin best slots ---------- */
+  /* ---------- Admin: popular slots ---------- */
   .best-slots { max-width: 800px; margin: 0 auto 40px; padding: 0 24px; }
   .best-slots h3 { font-size: 1.1rem; color: #1b5e20; margin-bottom: 12px; border-bottom: 2px solid #c8e6c9; padding-bottom: 8px; }
   .slot-row {
-    display: flex; align-items: baseline; gap: 12px;
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
     padding: 9px 14px; border-radius: 6px; font-size: .88rem;
     transition: background .15s;
   }
@@ -182,28 +170,9 @@
   .slot-count { font-weight: 800; color: #2e7d32; min-width: 24px; text-align: center; }
   .slot-date { font-weight: 600; color: #333; min-width: 110px; }
   .slot-time { color: #555; min-width: 120px; }
-  .slot-profs { color: #777; font-size: .82rem; }
+  .slot-names { color: #777; font-size: .82rem; }
 
-  /* ---------- Info panel (right of table) ---------- */
-  .prof-layout { display: flex; align-items: flex-start; gap: 0; }
-  .prof-layout .grid-container { flex: 1; min-width: 0; }
-  .info-panel {
-    width: 220px; min-width: 220px; max-height: 500px;
-    background: #fff; border: 2px solid #c8e6c9; border-radius: 12px;
-    padding: 16px; margin: 16px 24px 16px 0;
-    box-shadow: 0 2px 12px rgba(0,0,0,.06);
-    font-size: .88rem; position: sticky; top: 16px;
-  }
-  .info-panel h3 { font-size: .95rem; color: #1b5e20; margin-bottom: 8px; border-bottom: 2px solid #c8e6c9; padding-bottom: 6px; }
-  .info-panel .ip-slot { font-weight: 700; color: #333; margin-bottom: 6px; }
-  .info-panel .ip-time { color: #555; margin-bottom: 10px; font-size: .84rem; }
-  .info-panel .ip-names { line-height: 1.7; }
-  .info-panel .ip-name { display: flex; align-items: center; gap: 6px; padding: 3px 0; }
-  .info-panel .ip-dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
-  .info-panel .ip-dot.xiao { background: #1b5e20; }
-  .info-panel .ip-empty { color: #999; font-style: italic; }
-
-  /* Hide old floating tooltip in prof view, keep for admin */
+  /* Tooltip (admin view) */
   .cell-tooltip {
     display: none; position: fixed;
     background: #fff; border: 1px solid #c8e6c9; border-radius: 8px;
@@ -214,99 +183,123 @@
   .cell-tooltip .tt-title { font-weight: 700; color: #1b5e20; margin-bottom: 4px; }
   .cell-tooltip .tt-list { color: #555; line-height: 1.5; }
 
+  /* ---------- Footer / admin link ---------- */
+  .foot { text-align: center; padding: 8px 24px 32px; font-size: .8rem; color: #aaa; }
+  .foot a { color: #aaa; text-decoration: none; }
+  .foot a:hover { color: #2e7d32; text-decoration: underline; }
+  .admin-login {
+    display: none; margin: 0 auto 24px; max-width: 360px;
+    background: #fff; border: 2px solid #c8e6c9; border-radius: 12px; padding: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  }
+  .admin-login.open { display: block; }
+  .admin-login label { display: block; font-size: .82rem; font-weight: 600; color: #555; margin-bottom: 6px; }
+  .admin-login .row { display: flex; gap: 8px; }
+  .admin-login input {
+    flex: 1; padding: 9px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: .95rem; outline: none;
+  }
+  .admin-login input:focus { border-color: #4caf50; }
+  .admin-error { color: #c62828; font-size: .82rem; margin-top: 8px; min-height: 18px; }
+
   .view { display: none; }
   .view.active { display: block; }
-  .login-wrapper.active { display: flex; }
+
+  /* ---------- Mobile ---------- */
+  @media (max-width: 760px) {
+    .app-header { padding: 10px 14px; }
+    .app-header h1 { font-size: 1.05rem; }
+    .name-form { flex: 1 1 100%; min-width: 0; justify-content: stretch; }
+    .name-form input { max-width: none; }
+    .layout { flex-direction: column; }
+    .grid-container { padding: 12px 12px 16px; width: 100%; }
+    .info-panel { width: auto; min-width: 0; align-self: stretch; margin: 0 12px 12px; position: static; max-height: none; }
+    .instructions { padding: 12px 14px 4px; font-size: .85rem; }
+  }
 </style>
 </head>
 <body>
 
-<!-- Loading overlay -->
 <div id="loading-overlay"><div class="spinner"></div></div>
-
-<!-- Toast -->
 <div id="toast"></div>
-
-<!-- Tooltip -->
 <div id="cell-tooltip" class="cell-tooltip">
   <div class="tt-title"></div>
   <div class="tt-list"></div>
 </div>
 
-<!-- ==================== LOGIN ==================== -->
-<div id="view-login" class="view login-wrapper active">
-  <div class="login-card">
-    <h1>Oral Qualifying Exam</h1>
-    <p class="subtitle">Schedule the Oral Qualifying Exam for Xiao</p>
+<!-- ==================== BOOKING VIEW ==================== -->
+<div id="view-book" class="view active">
+  <header class="app-header">
+    <h1>Book a Time Slot</h1>
+    <form class="name-form" id="name-form" autocomplete="off">
+      <input id="name-input" type="text" placeholder="Your name" autocomplete="name" maxlength="80">
+      <button type="submit" class="btn-book" id="btn-book">Book</button>
+    </form>
+  </header>
 
-    <div class="role-toggle">
-      <label><input type="radio" name="role" value="professor" checked><span>Professor</span></label>
-      <label><input type="radio" name="role" value="admin"><span>Admin</span></label>
-    </div>
+  <p class="instructions">
+    Type your name, click the times that work for you, then press <b>Book</b>.
+    <span class="legend-green">Green</span> = your picks. A small number in a cell = how many other people picked it.
+    Come back with the same name any time to change your booking.
+  </p>
+  <div class="my-status" id="my-status"></div>
 
-    <div id="name-group" class="form-group">
-      <label for="login-name">Name</label>
-      <input id="login-name" type="text" placeholder="e.g. Dr. Smith" autocomplete="name">
-    </div>
-    <div id="password-group" class="form-group" style="display:none">
-      <label for="login-password">Password</label>
-      <input id="login-password" type="password" placeholder="Enter admin password">
-    </div>
-
-    <button class="btn-login" id="btn-login">Log In</button>
-    <div class="login-error" id="login-error"></div>
-  </div>
-</div>
-
-<!-- ==================== PROFESSOR VIEW ==================== -->
-<div id="view-professor" class="view">
-  <div class="app-header">
-    <h2 id="prof-welcome">Welcome</h2>
-    <button class="btn-logout" onclick="logout()">Log Out</button>
-  </div>
-  <p class="instructions">Click on time slots when you are available. <span style="color:#4caf50;font-weight:700">Green = available.</span> Hover a slot to see details on the right. <b>3 professors</b> in this committee.<br><span style="color:#1b5e20;font-style:italic">Note: Xiao is available for all time slots.</span></p>
-  <div class="prof-layout">
+  <div class="layout">
     <div class="grid-container">
-      <table class="schedule-table" id="prof-table"></table>
+      <div class="no-dates" id="no-dates" hidden>No dates have been set up yet. Please check back soon.</div>
+      <table class="schedule-table" id="book-table"></table>
     </div>
-    <div class="info-panel" id="info-panel">
-      <h3>Slot Details</h3>
+    <aside class="info-panel" id="info-panel">
+      <h3>Slot details</h3>
       <div id="ip-content">
-        <p class="ip-empty">Hover over a time slot to see who is available.</p>
+        <p class="ip-empty">Hover or tap a slot to see who picked it.</p>
       </div>
+    </aside>
+  </div>
+
+  <div class="admin-login" id="admin-login">
+    <label for="admin-password">Admin password</label>
+    <div class="row">
+      <input id="admin-password" type="password" placeholder="Password">
+      <button class="btn-book" id="btn-admin-login" type="button">View all</button>
     </div>
+    <div class="admin-error" id="admin-error"></div>
   </div>
-  <div class="save-bar">
-    <button class="btn-save" id="btn-save">Save Availability</button>
-  </div>
+  <footer class="foot"><a href="#" id="admin-link">Admin</a></footer>
 </div>
 
 <!-- ==================== ADMIN VIEW ==================== -->
 <div id="view-admin" class="view">
-  <div class="app-header">
-    <h2>Admin Dashboard</h2>
-    <button class="btn-logout" onclick="logout()">Log Out</button>
-  </div>
+  <header class="app-header">
+    <h1>All bookings</h1>
+    <button class="btn-secondary" id="btn-admin-back" type="button">Back to booking</button>
+  </header>
+  <p class="instructions">Each cell shows how many people picked that slot. <span style="color:#f9a825">&#9733;</span> = everyone picked it.</p>
   <div class="grid-container">
     <table class="schedule-table" id="admin-table"></table>
   </div>
-  <div class="best-slots" id="best-slots">
-    <h3>Best Time Slots</h3>
+  <div class="best-slots">
+    <h3>Most popular slots</h3>
     <div id="best-slots-list"></div>
   </div>
 </div>
 
 <script>
 // ========== CONFIGURATION ==========
+// Apps Script Web App URL (see README for deployment).
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzk8NUdQDyav3q5bZfTXi7iLJIOhyG8wsK1Z3aH4vQEs_eqats6X_nEfW7wDE9bt-14/exec';
 
-// ========== DATES & TIMES ==========
-const DATES = [
-  '2026-04-10','2026-04-13','2026-04-14','2026-04-15','2026-04-16',
-  '2026-04-17','2026-04-20','2026-04-21','2026-04-22','2026-04-23','2026-04-24'
-];
+// Dates shown in the grid, as 'YYYY-MM-DD'. Left EMPTY on purpose until the next
+// booking window is decided; the page then shows a "no dates yet" notice.
+// Once filled in, DATES / HOURS MUST match the same constants in Code.gs
+// (the backend silently ignores slots it does not know about), e.g.
+//   const DATES = ['2026-10-05','2026-10-06','2026-10-07'];
+const DATES = [];
 const HOURS = [9,10,11,12,13,14,15,16];
+const HAS_SLOTS = DATES.length > 0 && HOURS.length > 0;
 
+const NAME_STORAGE_KEY = 'timeslot_name';
+
+// ========== DATE / TIME HELPERS ==========
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -314,46 +307,44 @@ function formatColHeader(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
   return DAY_NAMES[d.getDay()] + '\n' + MONTH_NAMES[d.getMonth()] + ' ' + d.getDate();
 }
-
 function formatHour(h) {
   if (h === 12) return '12:00 PM';
   if (h > 12) return (h - 12) + ':00 PM';
   return h + ':00 AM';
 }
-function formatTimeRange(h) {
-  return formatHour(h) + ' - ' + formatHour(h + 1);
-}
-
-function slotId(dateStr, hour) {
-  return dateStr + '_' + String(hour).padStart(2, '0');
-}
-
+function formatTimeRange(h) { return formatHour(h) + ' - ' + formatHour(h + 1); }
+function slotId(dateStr, hour) { return dateStr + '_' + String(hour).padStart(2, '0'); }
 function formatDateNice(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
   return DAY_NAMES[d.getDay()] + ', ' + MONTH_NAMES[d.getMonth()] + ' ' + d.getDate();
 }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
 
 // ========== STATE ==========
-let currentRole = '';
-let currentName = '';
-let currentPassword = '';
-let profSlots = {}; // slotId -> 1 | 0
+let allPeople = [];   // [{ name, slots: { slotId: 0|1 } }] from the server
+let mySlots = {};     // slotId -> 0|1 (current picks in the grid)
+let othersData = {};  // slotId -> { count, names[] } (everyone except me)
+let loadedFor = '';   // name whose stored booking is currently loaded into mySlots
+let adminPassword = '';
+
+function currentName() { return document.getElementById('name-input').value.trim(); }
 
 // ========== UI HELPERS ==========
 function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + id).classList.add('active');
+  window.scrollTo(0, 0);
 }
-
-function showLoading(on) {
-  document.getElementById('loading-overlay').classList.toggle('active', on);
-}
-
+function showLoading(on) { document.getElementById('loading-overlay').classList.toggle('active', on); }
+let toastTimer = null;
 function showToast(msg, isError) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = 'visible' + (isError ? ' error' : '');
-  setTimeout(() => { t.className = ''; }, 3000);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, 3200);
 }
 
 // ========== API ==========
@@ -366,366 +357,317 @@ async function apiCall(action, data = {}) {
       body: JSON.stringify({ action, ...data })
     });
     const json = await res.json();
-    showLoading(false);
     if (json.error) throw new Error(json.error);
     return json;
-  } catch (err) {
+  } finally {
     showLoading(false);
-    throw err;
   }
 }
 
-// ========== LOGIN ==========
-document.querySelectorAll('input[name="role"]').forEach(r => {
-  r.addEventListener('change', () => {
-    document.getElementById('name-group').style.display = r.value === 'professor' ? '' : 'none';
-    document.getElementById('password-group').style.display = r.value === 'admin' ? '' : 'none';
-  });
-});
-
-document.getElementById('btn-login').addEventListener('click', doLogin);
-document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-document.getElementById('login-name').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-
-async function doLogin() {
-  const role = document.querySelector('input[name="role"]:checked').value;
-  const name = document.getElementById('login-name').value.trim();
-  const password = document.getElementById('login-password').value;
-  const errEl = document.getElementById('login-error');
-  errEl.textContent = '';
-
-  if (role === 'professor' && !name) { errEl.textContent = 'Please enter your name.'; return; }
-  if (role === 'admin' && !password) { errEl.textContent = 'Please enter the admin password.'; return; }
-
-  try {
-    if (role === 'admin') {
-      const res = await apiCall('login', { role: 'admin', password });
-      if (!res.success) { errEl.textContent = res.message || 'Login failed.'; return; }
-    }
-
-    currentRole = role;
-    currentName = name;
-    currentPassword = password;
-
-    if (role === 'professor') {
-      document.getElementById('prof-welcome').textContent = 'Welcome, ' + name;
-      buildProfTable();
-      await loadProfAvailability();
-      showView('professor');
-    } else {
-      await loadAdminData();
-      showView('admin');
-    }
-  } catch (err) {
-    errEl.textContent = 'Connection error: ' + err.message;
-  }
-}
-
-function logout() {
-  currentRole = ''; currentName = ''; currentPassword = '';
-  document.getElementById('login-password').value = '';
-  document.getElementById('login-error').textContent = '';
-  showView('login');
-}
-
-// ========== PROFESSOR TABLE ==========
+// ========== BOOKING GRID ==========
 let isDragging = false;
 let dragValue = 1;
-let othersData = {}; // slotId -> { count, names[] } (other professors)
-let profTableBuilt = false;
 
-function buildProfTable() {
-  profSlots = {};
-  DATES.forEach(d => HOURS.forEach(h => { profSlots[slotId(d, h)] = 0; }));
+function buildTable() {
+  mySlots = {};
+  if (!HAS_SLOTS) {
+    document.getElementById('no-dates').hidden = false;
+    document.getElementById('info-panel').hidden = true;
+    document.getElementById('btn-book').disabled = true;
+    return;
+  }
+  DATES.forEach(d => HOURS.forEach(h => { mySlots[slotId(d, h)] = 0; }));
 
-  const table = document.getElementById('prof-table');
+  const table = document.getElementById('book-table');
   let html = '<thead><tr><th></th>';
   DATES.forEach(d => { html += '<th>' + formatColHeader(d) + '</th>'; });
   html += '</tr></thead><tbody>';
-
   HOURS.forEach(h => {
     html += '<tr><td>' + formatTimeRange(h) + '</td>';
     DATES.forEach(d => {
-      const sid = slotId(d, h);
-      html += '<td class="prof-cell unavailable" data-slot="' + sid + '"><span class="others-count"></span></td>';
+      html += '<td class="slot-cell" data-slot="' + slotId(d, h) + '"><span class="others-count"></span></td>';
     });
     html += '</tr>';
   });
   html += '</tbody>';
   table.innerHTML = html;
 
-  // Only attach event listeners once to avoid stacking
-  if (!profTableBuilt) {
-    profTableBuilt = true;
-
-    // Event delegation for click & drag
-    table.addEventListener('mousedown', e => {
-      const cell = e.target.closest('.prof-cell');
-      if (!cell) return;
-      e.preventDefault();
-      isDragging = true;
-      dragValue = profSlots[cell.dataset.slot] ? 0 : 1;
-      toggleProfCell(cell, dragValue);
-    });
-    table.addEventListener('mouseover', e => {
-      if (!isDragging) return;
-      const cell = e.target.closest('.prof-cell');
-      if (cell) toggleProfCell(cell, dragValue);
-    });
-    document.addEventListener('mouseup', () => { isDragging = false; });
-
-    // Touch support
-    table.addEventListener('touchstart', e => {
-      const cell = e.target.closest('.prof-cell');
-      if (!cell) return;
-      isDragging = true;
-      dragValue = profSlots[cell.dataset.slot] ? 0 : 1;
-      toggleProfCell(cell, dragValue);
-    }, { passive: true });
-    table.addEventListener('touchmove', e => {
-      if (!isDragging) return;
-      const touch = e.touches[0];
-      const el = document.elementFromPoint(touch.clientX, touch.clientY);
-      const cell = el && el.closest('.prof-cell');
-      if (cell) toggleProfCell(cell, dragValue);
-    }, { passive: true });
-    document.addEventListener('touchend', () => { isDragging = false; });
-
-    // Hover on cell to update the info panel on the right
-    table.addEventListener('mouseover', e => {
-      if (isDragging) return;
-      const cell = e.target.closest('.prof-cell');
-      if (!cell) return;
-      const sid = cell.dataset.slot;
-      const datePart = sid.substring(0, 10);
-      const hourPart = parseInt(sid.substring(11), 10);
-      const info = othersData[sid];
-      const others = info ? info.names : [];
-
-      const COMMITTEE_SIZE = 3;
-      let html = '<div class="ip-slot">' + formatDateNice(datePart) + '</div>';
-      html += '<div class="ip-time">' + formatTimeRange(hourPart) + '</div>';
-      html += '<div class="ip-names">';
-      html += '<div class="ip-name"><span class="ip-dot xiao"></span> Xiao (always available)</div>';
-      if (others.length > 0) {
-        others.forEach(n => {
-          html += '<div class="ip-name"><span class="ip-dot"></span> ' + n + '</div>';
-        });
-      } else {
-        html += '<div class="ip-name" style="color:#999">No other professors yet</div>';
-      }
-      html += '</div>';
-      if (others.length >= COMMITTEE_SIZE) {
-        html += '<div style="margin-top:10px;padding:8px;background:#e8f5e9;border-radius:6px;color:#1b5e20;font-weight:700;text-align:center">All committee members available!</div>';
-      } else {
-        html += '<div style="margin-top:10px;color:#777;font-size:.82rem">' + others.length + ' / ' + COMMITTEE_SIZE + ' professors available</div>';
-      }
-      document.getElementById('ip-content').innerHTML = html;
-    });
-  }
+  // Click & drag to toggle
+  table.addEventListener('mousedown', e => {
+    const cell = e.target.closest('.slot-cell');
+    if (!cell) return;
+    e.preventDefault();
+    isDragging = true;
+    dragValue = mySlots[cell.dataset.slot] ? 0 : 1;
+    setCell(cell, dragValue);
+  });
+  table.addEventListener('mouseover', e => {
+    const cell = e.target.closest('.slot-cell');
+    if (!cell) return;
+    if (isDragging) setCell(cell, dragValue);
+    else showSlotInfo(cell.dataset.slot);
+  });
+  document.addEventListener('mouseup', () => { isDragging = false; });
+  // Touch: a tap arrives as browser-synthesized mouseover/mousedown/mouseup, so it
+  // toggles one cell via the handlers above; a finger drag pans the grid instead.
 }
 
-function toggleProfCell(cell, val) {
-  const sid = cell.dataset.slot;
-  profSlots[sid] = val;
-  cell.classList.toggle('available', val === 1);
-  cell.classList.toggle('unavailable', val === 0);
+function setCell(cell, val) {
+  mySlots[cell.dataset.slot] = val;
+  cell.classList.toggle('mine', val === 1);
+  updateMyStatus();
 }
 
-function updateOthersDisplay() {
-  document.querySelectorAll('#prof-table .prof-cell').forEach(cell => {
+function selectedCount() { return Object.values(mySlots).filter(v => v === 1).length; }
+
+function updateMyStatus() {
+  const el = document.getElementById('my-status');
+  const n = selectedCount();
+  const name = currentName();
+  if (!name && n === 0) { el.textContent = ''; return; }
+  let msg = n === 0 ? 'No slots picked yet.' : n + ' slot' + (n === 1 ? '' : 's') + ' picked';
+  if (name && loadedFor && loadedFor === name.toLowerCase()) msg += ' (editing your existing booking)';
+  el.textContent = msg;
+}
+
+function renderCells() {
+  document.querySelectorAll('#book-table .slot-cell').forEach(cell => {
     const sid = cell.dataset.slot;
+    cell.classList.toggle('mine', mySlots[sid] === 1);
     const info = othersData[sid];
     const count = info ? info.count : 0;
     const span = cell.querySelector('.others-count');
-    // Remove old others-N classes
     cell.classList.remove('others-1', 'others-2', 'others-3');
     if (count > 0) {
       span.textContent = count;
       span.title = info.names.join(', ');
-      if (!cell.classList.contains('available')) {
-        cell.classList.add('others-' + Math.min(count, 3));
-      }
+      cell.classList.add('others-' + Math.min(count, 3));
     } else {
       span.textContent = '';
       span.title = '';
     }
   });
+  updateMyStatus();
 }
 
-async function loadProfAvailability() {
-  try {
-    // Load all professors' data in one call
-    const res = await apiCall('getAllPublic', {});
-    const allProfs = res.professors || [];
-    const myNameLower = currentName.toLowerCase();
+function showSlotInfo(sid) {
+  const datePart = sid.substring(0, 10);
+  const hourPart = parseInt(sid.substring(11), 10);
+  const others = othersData[sid] ? othersData[sid].names : [];
+  let html = '<div class="ip-slot">' + formatDateNice(datePart) + '</div>';
+  html += '<div class="ip-time">' + formatTimeRange(hourPart) + '</div>';
+  if (mySlots[sid] === 1) html += '<div class="ip-name"><span class="ip-dot me"></span> You</div>';
+  others.forEach(n => { html += '<div class="ip-name"><span class="ip-dot"></span> ' + escapeHtml(n) + '</div>'; });
+  if (others.length === 0 && mySlots[sid] !== 1) html += '<div class="ip-none">Nobody has picked this slot yet.</div>';
+  document.getElementById('ip-content').innerHTML = html;
+}
 
-    // Separate my data from others
-    othersData = {};
-    DATES.forEach(d => HOURS.forEach(h => {
-      const sid = slotId(d, h);
-      othersData[sid] = { count: 0, names: [] };
-    }));
+// Recompute "others" for the current name, and (optionally) load that name's stored picks.
+function applyName(loadStored) {
+  const name = currentName();
+  const nameLower = name.toLowerCase();
 
-    allProfs.forEach(prof => {
-      const isMe = prof.name.toLowerCase() === myNameLower;
-      Object.keys(prof.slots).forEach(sid => {
-        if (prof.slots[sid] === 1) {
-          if (isMe && profSlots.hasOwnProperty(sid)) {
-            profSlots[sid] = 1;
-          }
-          if (!isMe && othersData[sid]) {
-            othersData[sid].count++;
-            othersData[sid].names.push(prof.name);
-          }
-        }
-      });
+  othersData = {};
+  DATES.forEach(d => HOURS.forEach(h => { othersData[slotId(d, h)] = { count: 0, names: [] }; }));
+
+  let stored = null;
+  allPeople.forEach(p => {
+    const isMe = nameLower && p.name.toLowerCase() === nameLower;
+    if (isMe) { stored = p; return; }
+    Object.keys(p.slots).forEach(sid => {
+      if (p.slots[sid] === 1 && othersData[sid]) {
+        othersData[sid].count++;
+        othersData[sid].names.push(p.name);
+      }
     });
+  });
 
-    // Update my cells
-    document.querySelectorAll('#prof-table .prof-cell').forEach(cell => {
-      const v = profSlots[cell.dataset.slot];
-      cell.classList.toggle('available', v === 1);
-      cell.classList.toggle('unavailable', v !== 1);
-    });
-
-    // Update others display
-    updateOthersDisplay();
-  } catch (err) {
-    // First time user, no data yet - that's fine
+  if (loadStored && nameLower !== loadedFor) {
+    if (stored) {
+      // This name already has a booking: show it so it can be edited.
+      Object.keys(mySlots).forEach(sid => { mySlots[sid] = stored.slots[sid] === 1 ? 1 : 0; });
+      loadedFor = nameLower;
+      if (selectedCount() > 0) showToast('Loaded your existing booking, ' + name + '. Edit and press Book to update.');
+    } else if (loadedFor) {
+      // Switched away from a name whose booking was loaded: those picks belong to
+      // that name, so start the new name with a clean grid.
+      Object.keys(mySlots).forEach(sid => { mySlots[sid] = 0; });
+      loadedFor = '';
+    }
   }
+  renderCells();
 }
 
-document.getElementById('btn-save').addEventListener('click', async () => {
+async function loadAll(loadStored) {
+  if (!HAS_SLOTS) return;
   try {
-    await apiCall('saveAvailability', { name: currentName, slots: profSlots });
-    showToast('Availability saved successfully!');
-    // Refresh others' data after saving
-    await loadProfAvailability();
+    const res = await apiCall('getAllPublic', {});
+    allPeople = res.professors || res.people || [];
   } catch (err) {
-    showToast('Error saving: ' + err.message, true);
+    showToast('Could not load existing bookings: ' + err.message, true);
+    allPeople = [];
+  }
+  applyName(loadStored);
+}
+
+// Name input: react as the guest types (debounced) and on blur/enter.
+let nameTimer = null;
+const nameInput = document.getElementById('name-input');
+nameInput.addEventListener('input', () => {
+  clearTimeout(nameTimer);
+  nameTimer = setTimeout(() => applyName(true), 350);
+});
+nameInput.addEventListener('change', () => { clearTimeout(nameTimer); applyName(true); });
+
+// Book
+document.getElementById('name-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = currentName();
+  if (!name) { showToast('Please type your name first.', true); nameInput.focus(); return; }
+  const n = selectedCount();
+  if (n === 0) {
+    const hadBooking = allPeople.some(p => p.name.toLowerCase() === name.toLowerCase());
+    if (!hadBooking) { showToast('Click at least one time slot, then press Book.', true); return; }
+    if (!confirm('You have no slots selected. Clear your existing booking?')) return;
+  }
+  try {
+    await apiCall('saveAvailability', { name, slots: mySlots });
+    try { localStorage.setItem(NAME_STORAGE_KEY, name); } catch (_) {}
+    showToast(n === 0 ? 'Booking cleared.' : 'Booked! ' + n + ' slot' + (n === 1 ? '' : 's') + ' saved for ' + name + '.');
+    loadedFor = name.toLowerCase();
+    await loadAll(false);
+  } catch (err) {
+    showToast('Could not save: ' + err.message, true);
   }
 });
 
-// ========== ADMIN TABLE ==========
-async function loadAdminData() {
+// ========== ADMIN ==========
+document.getElementById('admin-link').addEventListener('click', e => {
+  e.preventDefault();
+  const box = document.getElementById('admin-login');
+  box.classList.toggle('open');
+  if (box.classList.contains('open')) document.getElementById('admin-password').focus();
+});
+document.getElementById('admin-password').addEventListener('keydown', e => { if (e.key === 'Enter') adminLogin(); });
+document.getElementById('btn-admin-login').addEventListener('click', adminLogin);
+document.getElementById('btn-admin-back').addEventListener('click', () => {
+  showView('book');
+  loadAll(false);
+});
+
+async function adminLogin() {
+  const pw = document.getElementById('admin-password').value;
+  const errEl = document.getElementById('admin-error');
+  errEl.textContent = '';
+  if (!pw) { errEl.textContent = 'Please enter the admin password.'; return; }
   try {
-    const res = await apiCall('getAll', { password: currentPassword });
-    // Build summary from raw professors data
-    const allProfs = res.professors || [];
-    const summary = {};
-    DATES.forEach(d => HOURS.forEach(h => {
-      const sid = slotId(d, h);
-      summary[sid] = { count: 0, names: [] };
-    }));
-    allProfs.forEach(prof => {
-      Object.keys(prof.slots).forEach(sid => {
-        if (prof.slots[sid] === 1 && summary[sid]) {
-          summary[sid].count++;
-          summary[sid].names.push(prof.name);
-        }
-      });
-    });
-    buildAdminTable({ professors: allProfs, summary });
+    const res = await apiCall('getAll', { password: pw });
+    adminPassword = pw;
+    buildAdminView(res.professors || res.people || []);
+    document.getElementById('admin-password').value = '';
+    document.getElementById('admin-login').classList.remove('open');
+    showView('admin');
   } catch (err) {
-    showToast('Error loading data: ' + err.message, true);
+    errEl.textContent = err.message;
   }
 }
 
-function buildAdminTable(data) {
-  const allProfs = data.professors || [];
-  const summary = data.summary || {}; // slotId -> { count, names: [] }
-  const totalProfs = allProfs.length || 1;
+function buildAdminView(people) {
+  if (!HAS_SLOTS) {
+    document.getElementById('admin-table').innerHTML = '';
+    document.getElementById('best-slots-list').innerHTML = '<p style="color:#999;padding:12px 0">No dates have been set up yet.</p>';
+    return;
+  }
+  const summary = {};
+  DATES.forEach(d => HOURS.forEach(h => { summary[slotId(d, h)] = { count: 0, names: [] }; }));
+  people.forEach(p => {
+    Object.keys(p.slots).forEach(sid => {
+      if (p.slots[sid] === 1 && summary[sid]) { summary[sid].count++; summary[sid].names.push(p.name); }
+    });
+  });
+  // Only people with at least one pick count toward "everyone" (ignores cleared bookings).
+  const totalPeople = people.filter(p => Object.values(p.slots).some(v => v === 1)).length || 1;
 
   const table = document.getElementById('admin-table');
   let html = '<thead><tr><th></th>';
   DATES.forEach(d => { html += '<th>' + formatColHeader(d) + '</th>'; });
   html += '</tr></thead><tbody>';
-
   HOURS.forEach(h => {
     html += '<tr><td>' + formatTimeRange(h) + '</td>';
     DATES.forEach(d => {
       const sid = slotId(d, h);
-      const info = summary[sid] || { count: 0, names: [] };
+      const info = summary[sid];
       const count = info.count;
-      const isFull = count > 0 && count === totalProfs;
-      const colorClass = 'count-' + Math.min(count, 5);
-
-      // Compute background color
+      const everyone = count > 0 && count === totalPeople;
       let bg = '#f5f5f5';
       if (count > 0) {
-        const ratio = count / totalProfs;
-        // Interpolate from #e8f5e9 to #1b5e20
+        const ratio = count / totalPeople;
         const r = Math.round(232 - ratio * (232 - 27));
         const g = Math.round(245 - ratio * (245 - 94));
         const b = Math.round(233 - ratio * (233 - 32));
         bg = 'rgb(' + r + ',' + g + ',' + b + ')';
       }
-      const textColor = (count / totalProfs > 0.6) ? '#fff' : '#1b5e20';
-
-      html += '<td class="admin-cell' + (isFull ? ' full-consensus' : '') + (count === 0 ? ' count-0' : '') + '"'
+      const textColor = (count / totalPeople > 0.6) ? '#fff' : '#1b5e20';
+      html += '<td class="admin-cell' + (everyone ? ' everyone' : '') + (count === 0 ? ' count-0' : '') + '"'
            + ' style="background:' + bg + ';color:' + textColor + '"'
-           + ' data-slot="' + sid + '" data-names="' + (info.names || []).join(', ') + '"'
-           + ' data-count="' + count + '">'
-           + count
-           + '</td>';
+           + ' data-slot="' + sid + '" data-names="' + escapeHtml(info.names.join(', ')) + '"'
+           + ' data-count="' + count + '">' + count + '</td>';
     });
     html += '</tr>';
   });
   html += '</tbody>';
   table.innerHTML = html;
 
-  // Tooltip for admin cells
-  const tooltip = document.getElementById('cell-tooltip');
-  table.addEventListener('mouseover', e => {
-    const cell = e.target.closest('.admin-cell');
-    if (!cell || cell.dataset.count === '0') { tooltip.style.display = 'none'; return; }
-    const sid = cell.dataset.slot;
-    const datePart = sid.substring(0, 10);
-    const hourPart = parseInt(sid.substring(11), 10);
-    tooltip.querySelector('.tt-title').textContent = formatDateNice(datePart) + ', ' + formatTimeRange(hourPart);
-    tooltip.querySelector('.tt-list').textContent = 'Xiao (available), ' + (cell.dataset.names || 'None');
-    tooltip.style.display = 'block';
+  // Tooltip (listeners attached once)
+  if (!table.dataset.wired) {
+    table.dataset.wired = '1';
+    const tooltip = document.getElementById('cell-tooltip');
+    table.addEventListener('mouseover', e => {
+      const cell = e.target.closest('.admin-cell');
+      if (!cell || cell.dataset.count === '0') { tooltip.style.display = 'none'; return; }
+      const sid = cell.dataset.slot;
+      tooltip.querySelector('.tt-title').textContent = formatDateNice(sid.substring(0, 10)) + ', ' + formatTimeRange(parseInt(sid.substring(11), 10));
+      tooltip.querySelector('.tt-list').textContent = cell.dataset.names || '';
+      tooltip.style.display = 'block';
+      const rect = cell.getBoundingClientRect();
+      let left = rect.right + 8, top = rect.top;
+      if (left + 240 > window.innerWidth) left = rect.left - 248;
+      if (top + 80 > window.innerHeight) top = window.innerHeight - 80;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+    });
+    table.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+  }
 
-    const rect = cell.getBoundingClientRect();
-    let left = rect.right + 8;
-    let top = rect.top;
-    if (left + 240 > window.innerWidth) left = rect.left - 248;
-    if (top + 80 > window.innerHeight) top = window.innerHeight - 80;
-    tooltip.style.left = left + 'px';
-    tooltip.style.top = top + 'px';
-  });
-  table.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
-
-  // Best slots list
-  const slots = [];
+  // Popular slots list
+  const rows = [];
   Object.keys(summary).forEach(sid => {
     const info = summary[sid];
-    if (info.count > 0) {
-      const datePart = sid.substring(0, 10);
-      const hourPart = parseInt(sid.substring(11), 10);
-      slots.push({ sid, date: datePart, hour: hourPart, count: info.count, names: info.names, isFull: info.count === totalProfs });
-    }
+    if (info.count > 0) rows.push({ date: sid.substring(0, 10), hour: parseInt(sid.substring(11), 10), count: info.count, names: info.names });
   });
-  slots.sort((a, b) => b.count - a.count || a.date.localeCompare(b.date) || a.hour - b.hour);
-
+  rows.sort((a, b) => b.count - a.count || a.date.localeCompare(b.date) || a.hour - b.hour);
   const listEl = document.getElementById('best-slots-list');
-  if (slots.length === 0) {
-    listEl.innerHTML = '<p style="color:#999;padding:12px 0">No availability data submitted yet.</p>';
+  if (rows.length === 0) {
+    listEl.innerHTML = '<p style="color:#999;padding:12px 0">No bookings yet.</p>';
   } else {
-    listEl.innerHTML = slots.map(s =>
+    listEl.innerHTML = rows.map(s =>
       '<div class="slot-row">'
       + '<span class="slot-count">' + s.count + '</span>'
       + '<span class="slot-date">' + formatDateNice(s.date) + '</span>'
       + '<span class="slot-time">' + formatTimeRange(s.hour) + '</span>'
-      + '<span class="slot-profs">' + s.names.join(', ') + (s.isFull ? ' \u2605' : '') + '</span>'
+      + '<span class="slot-names">' + escapeHtml(s.names.join(', ')) + (s.count === totalPeople ? ' ★' : '') + '</span>'
       + '</div>'
     ).join('');
   }
 }
 
 // ========== INIT ==========
-showView('login');
+buildTable();
+try {
+  const saved = localStorage.getItem(NAME_STORAGE_KEY);
+  if (saved) nameInput.value = saved;
+} catch (_) {}
+loadAll(true);
 </script>
 </body>
 </html>
