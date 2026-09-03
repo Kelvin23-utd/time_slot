@@ -288,14 +288,20 @@
 // Apps Script Web App URL (see README for deployment).
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzk8NUdQDyav3q5bZfTXi7iLJIOhyG8wsK1Z3aH4vQEs_eqats6X_nEfW7wDE9bt-14/exec';
 
-// Dates shown in the grid, as 'YYYY-MM-DD'. Left EMPTY on purpose until the next
-// booking window is decided; the page then shows a "no dates yet" notice.
-// Once filled in, DATES / HOURS MUST match the same constants in Code.gs
-// (the backend silently ignores slots it does not know about), e.g.
-//   const DATES = ['2026-10-05','2026-10-06','2026-10-07'];
-const DATES = [];
+// Dates shown in the grid, as 'YYYY-MM-DD'. This is the ONLY place dates live:
+// the backend (Code.gs v2) adds sheet columns for new slot ids on the first Book.
+// Leave the list empty to close booking (the page shows a "no dates yet" notice).
+// Current window: weekdays Fri Sep 4 - Fri Sep 18, 2026.
+const DATES = [
+  '2026-09-04',
+  '2026-09-07','2026-09-08','2026-09-09','2026-09-10','2026-09-11',
+  '2026-09-14','2026-09-15','2026-09-16','2026-09-17','2026-09-18'
+];
 const HOURS = [9,10,11,12,13,14,15,16];
 const HAS_SLOTS = DATES.length > 0 && HOURS.length > 0;
+// The page refuses to take bookings from a backend older than this (v1 hardcoded
+// its own dates and silently dropped anything else).
+const MIN_BACKEND_VERSION = 2;
 
 const NAME_STORAGE_KEY = 'timeslot_name';
 
@@ -328,6 +334,7 @@ let mySlots = {};     // slotId -> 0|1 (current picks in the grid)
 let othersData = {};  // slotId -> { count, names[] } (everyone except me)
 let loadedFor = '';   // name whose stored booking is currently loaded into mySlots
 let adminPassword = '';
+let backendReady = false; // true once the server answered with a compatible version
 
 function currentName() { return document.getElementById('name-input').value.trim(); }
 
@@ -368,14 +375,19 @@ async function apiCall(action, data = {}) {
 let isDragging = false;
 let dragValue = 1;
 
+// Replace the grid with a notice and disable booking.
+function showClosed(msg) {
+  const n = document.getElementById('no-dates');
+  n.textContent = msg;
+  n.hidden = false;
+  document.getElementById('book-table').hidden = true;
+  document.getElementById('info-panel').hidden = true;
+  document.getElementById('btn-book').disabled = true;
+}
+
 function buildTable() {
   mySlots = {};
-  if (!HAS_SLOTS) {
-    document.getElementById('no-dates').hidden = false;
-    document.getElementById('info-panel').hidden = true;
-    document.getElementById('btn-book').disabled = true;
-    return;
-  }
+  if (!HAS_SLOTS) { showClosed('No dates have been set up yet. Please check back soon.'); return; }
   DATES.forEach(d => HOURS.forEach(h => { mySlots[slotId(d, h)] = 0; }));
 
   const table = document.getElementById('book-table');
@@ -502,6 +514,12 @@ async function loadAll(loadStored) {
   if (!HAS_SLOTS) return;
   try {
     const res = await apiCall('getAllPublic', {});
+    if (!(res.version >= MIN_BACKEND_VERSION)) {
+      backendReady = false;
+      showClosed('Booking is not open yet. Please check back soon.');
+      return;
+    }
+    backendReady = true;
     allPeople = res.professors || res.people || [];
   } catch (err) {
     showToast('Could not load existing bookings: ' + err.message, true);
@@ -523,6 +541,7 @@ nameInput.addEventListener('change', () => { clearTimeout(nameTimer); applyName(
 document.getElementById('name-form').addEventListener('submit', async e => {
   e.preventDefault();
   const name = currentName();
+  if (!backendReady) { showToast('Could not reach the booking server. Please reload the page.', true); return; }
   if (!name) { showToast('Please type your name first.', true); nameInput.focus(); return; }
   const n = selectedCount();
   if (n === 0) {
@@ -536,6 +555,10 @@ document.getElementById('name-form').addEventListener('submit', async e => {
     showToast(n === 0 ? 'Booking cleared.' : 'Booked! ' + n + ' slot' + (n === 1 ? '' : 's') + ' saved for ' + name + '.');
     loadedFor = name.toLowerCase();
     await loadAll(false);
+    // Read back: the server must now report exactly the picks that were sent.
+    const me = allPeople.find(p => p.name.toLowerCase() === name.toLowerCase());
+    const storedCount = me ? Object.keys(mySlots).filter(sid => me.slots[sid] === 1).length : 0;
+    if (storedCount !== n) showToast('Warning: the server did not store your picks. Please tell the organizer.', true);
   } catch (err) {
     showToast('Could not save: ' + err.message, true);
   }
@@ -585,8 +608,10 @@ function buildAdminView(people) {
       if (p.slots[sid] === 1 && summary[sid]) { summary[sid].count++; summary[sid].names.push(p.name); }
     });
   });
-  // Only people with at least one pick count toward "everyone" (ignores cleared bookings).
-  const totalPeople = people.filter(p => Object.values(p.slots).some(v => v === 1)).length || 1;
+  // Only people with at least one pick in the CURRENT dates count toward "everyone"
+  // (ignores cleared bookings and stale columns from an earlier window).
+  const knownIds = Object.keys(summary);
+  const totalPeople = people.filter(p => knownIds.some(sid => p.slots[sid] === 1)).length || 1;
 
   const table = document.getElementById('admin-table');
   let html = '<thead><tr><th></th>';

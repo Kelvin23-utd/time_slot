@@ -1,45 +1,27 @@
 // ============================================================
-// Time Slot Booking — Google Apps Script Backend
+// Time Slot Booking — Google Apps Script Backend (v2)
 // Deploy as Web App (Execute as: me, Access: Anyone)
-// NOTE: DATES / HOURS here MUST match the same constants in index.html.
+//
+// v2: slot ids are NOT hardcoded here any more. The page (index.html) owns
+// the dates. When a booking arrives with slot ids the sheet has not seen,
+// the matching header columns are added automatically. Every response
+// carries "version": 2 so the page can tell this backend from the old one
+// (v1 hardcoded its own dates and silently dropped anything else).
 // ============================================================
-
-// --------------- Constants ---------------
 
 var AVAILABILITY_SHEET = "Availability";
 var CONFIG_SHEET = "Config";
+var API_VERSION = 2;
+var SLOT_RE = /^\d{4}-\d{2}-\d{2}_\d{2}$/;   // e.g. 2026-09-04_09
+var MAX_SLOTS_PER_SAVE = 1000;
 
-// All weekdays April 10–24, 2026
-var DATES = [
-  "2026-04-10", // Fri
-  "2026-04-13", // Mon
-  "2026-04-14", // Tue
-  "2026-04-15", // Wed
-  "2026-04-16", // Thu
-  "2026-04-17", // Fri
-  "2026-04-20", // Mon
-  "2026-04-21", // Tue
-  "2026-04-22", // Wed
-  "2026-04-23", // Thu
-  "2026-04-24"  // Fri
-];
+// --------------- Entry points ---------------
 
-// Hours 9–16 (9:00 AM to 4:00–5:00 PM), 8 slots per day
-var HOURS = [9, 10, 11, 12, 13, 14, 15, 16];
-
-// Build the full list of 88 slot IDs once
-function getAllSlotIds() {
-  var slots = [];
-  for (var d = 0; d < DATES.length; d++) {
-    for (var h = 0; h < HOURS.length; h++) {
-      var hr = HOURS[h] < 10 ? "0" + HOURS[h] : "" + HOURS[h];
-      slots.push(DATES[d] + "_" + hr);
-    }
-  }
-  return slots; // length = 88
+// GET /exec in a browser -> quick health check of the deployment.
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, version: API_VERSION }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
-
-// --------------- Entry point ---------------
 
 function doPost(e) {
   try {
@@ -99,6 +81,57 @@ function verifyPassword(password, role) {
   return String(password).trim() === stored;
 }
 
+// --------------- Sheet helpers ---------------
+
+// Reads the whole sheet once: header row, all rows, and slotId -> 0-based column.
+function readSheet(sheet) {
+  var data = sheet.getDataRange().getValues();
+  if (data.length === 0) data = [["Name"]];
+  var headers = data[0];
+  var slotCol = {};
+  for (var c = 1; c < headers.length; c++) {
+    var h = String(headers[c]).trim();
+    if (SLOT_RE.test(h)) slotCol[h] = c;
+  }
+  return { data: data, headers: headers, slotCol: slotCol };
+}
+
+// 0-based index of the row whose name matches (case-insensitive, trimmed), or -1.
+function findRow(data, name) {
+  var nameLower = String(name).trim().toLowerCase();
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][0]).trim().toLowerCase() === nameLower) return r;
+  }
+  return -1;
+}
+
+// { slotId: 0|1 } for one row. With onlyOnes, only the 1s are included.
+function rowToSlots(row, slotCol, onlyOnes) {
+  var slots = {};
+  var ids = Object.keys(slotCol);
+  for (var i = 0; i < ids.length; i++) {
+    var v = (row && row[slotCol[ids[i]]] == 1) ? 1 : 0;
+    if (v === 1 || !onlyOnes) slots[ids[i]] = v;
+  }
+  return slots;
+}
+
+function allBookings() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(AVAILABILITY_SHEET);
+  // The people list is still called "professors" (v1 name) so the page's API stays stable.
+  if (!sheet) return { success: true, version: API_VERSION, slotIds: [], professors: [] };
+
+  var s = readSheet(sheet);
+  var people = [];
+  for (var r = 1; r < s.data.length; r++) {
+    var pName = String(s.data[r][0]).trim();
+    if (!pName) continue;
+    people.push({ name: pName, slots: rowToSlots(s.data[r], s.slotCol, false) });
+  }
+  return { success: true, version: API_VERSION, slotIds: Object.keys(s.slotCol).sort(), professors: people };
+}
+
 // --------------- Action handlers ---------------
 
 function handleLogin(body) {
@@ -108,227 +141,116 @@ function handleLogin(body) {
   if (role !== "user" && role !== "admin") {
     return { success: false, error: "Invalid role." };
   }
-
-  // Only admin requires password verification
-  if (role === "admin") {
-    if (!verifyPassword(password, role)) {
-      return { success: false, error: "Incorrect password." };
-    }
+  if (role === "admin" && !verifyPassword(password, role)) {
+    return { success: false, error: "Incorrect password." };
   }
-
-  return { success: true, role: role };
+  return { success: true, version: API_VERSION, role: role };
 }
 
+// One person's picks (only the 1s). No password required.
 function handleGetAvailability(body) {
-  // No password required for guests
   var name = (body.name || "").trim();
-  if (!name) {
-    return { success: false, error: "Name is required." };
-  }
+  if (!name) return { success: false, error: "Name is required." };
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(AVAILABILITY_SHEET);
-  if (!sheet) {
-    return { success: true, slots: {} };
-  }
+  if (!sheet) return { success: true, version: API_VERSION, slots: {} };
 
-  var allSlots = getAllSlotIds();
-  var data = sheet.getDataRange().getValues();
-  var headers = data[0]; // row 1
-
-  // Build header-index map (slot ID -> column index)
-  var slotCol = {};
-  for (var c = 1; c < headers.length; c++) {
-    slotCol[String(headers[c]).trim()] = c;
-  }
-
-  // Find this guest's row (case-insensitive, trimmed)
-  var nameLower = name.toLowerCase();
-  var rowData = null;
-  for (var r = 1; r < data.length; r++) {
-    if (String(data[r][0]).trim().toLowerCase() === nameLower) {
-      rowData = data[r];
-      break;
-    }
-  }
-
-  var slots = {};
-  if (rowData) {
-    for (var s = 0; s < allSlots.length; s++) {
-      var col = slotCol[allSlots[s]];
-      if (col !== undefined && rowData[col] == 1) {
-        slots[allSlots[s]] = 1;
-      }
-    }
-  }
-
-  return { success: true, slots: slots };
+  var s = readSheet(sheet);
+  var r = findRow(s.data, name);
+  return { success: true, version: API_VERSION, slots: (r === -1) ? {} : rowToSlots(s.data[r], s.slotCol, true) };
 }
 
+// Store one person's picks. No password required. A person's booking is exactly
+// what they last sent: every known slot column is written 1 or 0.
 function handleSaveAvailability(body) {
-  // No password required for guests
-
   var name = (body.name || "").trim();
-  if (!name) {
-    return { success: false, error: "Name is required." };
+  if (!name) return { success: false, error: "Name is required." };
+
+  var incoming = body.slots || {};
+  var ids = [];
+  for (var k in incoming) {
+    if (incoming.hasOwnProperty(k) && SLOT_RE.test(String(k).trim())) ids.push(String(k).trim());
   }
+  if (ids.length > MAX_SLOTS_PER_SAVE) return { success: false, error: "Too many slots." };
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(AVAILABILITY_SHEET);
   if (!sheet) {
-    // Auto-create the sheet with headers
     initSheet();
     sheet = ss.getSheetByName(AVAILABILITY_SHEET);
   }
+  var s = readSheet(sheet);
 
-  var allSlots = getAllSlotIds();
-  var data = sheet.getDataRange().getValues();
-  var headers = data[0];
-
-  // Build header-index map
-  var slotCol = {};
-  for (var c = 1; c < headers.length; c++) {
-    slotCol[String(headers[c]).trim()] = c;
+  // 1. Add header columns for slot ids the sheet has not seen yet.
+  var missing = [];
+  for (var i = 0; i < ids.length; i++) {
+    if (s.slotCol[ids[i]] === undefined) missing.push(ids[i]);
   }
-
-  // Find this guest's existing row (case-insensitive)
-  var nameLower = name.toLowerCase();
-  var profRow = -1; // 0-based index in data[]
-  for (var r = 1; r < data.length; r++) {
-    if (String(data[r][0]).trim().toLowerCase() === nameLower) {
-      profRow = r;
-      break;
+  if (missing.length > 0) {
+    missing.sort();
+    sheet.getRange(1, s.headers.length + 1, 1, missing.length).setValues([missing]);
+    for (var m = 0; m < missing.length; m++) {
+      s.slotCol[missing[m]] = s.headers.length;   // 0-based index in row arrays
+      s.headers.push(missing[m]);
     }
   }
 
-  // If not found, append a new row
-  if (profRow === -1) {
-    profRow = data.length; // next row (0-based in data, 1-based in sheet = profRow+1)
-    sheet.getRange(profRow + 1, 1).setValue(name); // store original casing
-  }
+  // 2. Find this person's row, or append one.
+  var r = findRow(s.data, name);
+  var rowIndex = (r === -1) ? s.data.length + 1 : r + 1;   // 1-based sheet row
+  var existing = (r === -1) ? [] : s.data[r];
+  var storedName = (r === -1) ? name : String(existing[0]).trim();
 
-  // Write slot values
-  var incoming = body.slots || {};
-  for (var s = 0; s < allSlots.length; s++) {
-    var sid = allSlots[s];
-    var col = slotCol[sid];
-    if (col !== undefined) {
-      var val = (incoming[sid] == 1) ? 1 : 0;
-      sheet.getRange(profRow + 1, col + 1).setValue(val);
-    }
+  // 3. Write the whole row at once: slot columns get 0/1, anything else keeps its value.
+  var row = [storedName];
+  for (var c = 1; c < s.headers.length; c++) {
+    var h = String(s.headers[c]).trim();
+    if (SLOT_RE.test(h)) row.push(incoming[h] == 1 ? 1 : 0);
+    else row.push(existing[c] !== undefined ? existing[c] : "");
   }
+  sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
 
-  return { success: true };
+  return { success: true, version: API_VERSION };
 }
 
+// Everyone's picks; admin password required.
 function handleGetAll(body) {
   if (!verifyPassword(body.password, "admin")) {
     return { success: false, error: "Incorrect password." };
   }
-
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(AVAILABILITY_SHEET);
-  if (!sheet) {
-    return { success: true, professors: [] }; // key kept as "professors" for API compatibility
-  }
-
-  var allSlots = getAllSlotIds();
-  var data = sheet.getDataRange().getValues();
-  var headers = data[0];
-
-  // Build header-index map
-  var slotCol = {};
-  for (var c = 1; c < headers.length; c++) {
-    slotCol[String(headers[c]).trim()] = c;
-  }
-
-  var professors = [];
-  for (var r = 1; r < data.length; r++) {
-    var pName = String(data[r][0]).trim();
-    if (!pName) continue;
-
-    var slots = {};
-    for (var s = 0; s < allSlots.length; s++) {
-      var sid = allSlots[s];
-      var col = slotCol[sid];
-      if (col !== undefined) {
-        slots[sid] = (data[r][col] == 1) ? 1 : 0;
-      }
-    }
-    professors.push({ name: pName, slots: slots });
-  }
-
-  return { success: true, professors: professors };
+  return allBookings();
 }
 
+// Everyone's picks; no password (guests can see who else picked a slot).
 function handleGetAllPublic(body) {
-  // No password required — guests can see each other's picks
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(AVAILABILITY_SHEET);
-  if (!sheet) {
-    return { success: true, professors: [] }; // key kept as "professors" for API compatibility
-  }
-
-  var allSlots = getAllSlotIds();
-  var data = sheet.getDataRange().getValues();
-  var headers = data[0];
-
-  var slotCol = {};
-  for (var c = 1; c < headers.length; c++) {
-    slotCol[String(headers[c]).trim()] = c;
-  }
-
-  var professors = [];
-  for (var r = 1; r < data.length; r++) {
-    var pName = String(data[r][0]).trim();
-    if (!pName) continue;
-
-    var slots = {};
-    for (var s = 0; s < allSlots.length; s++) {
-      var sid = allSlots[s];
-      var col = slotCol[sid];
-      if (col !== undefined) {
-        slots[sid] = (data[r][col] == 1) ? 1 : 0;
-      }
-    }
-    professors.push({ name: pName, slots: slots });
-  }
-
-  return { success: true, professors: professors };
+  return allBookings();
 }
 
-// --------------- Manual setup helper ---------------
+// --------------- Manual setup helpers ---------------
 
 /**
- * Run this function once from the Apps Script editor to create the
- * "Availability" sheet with the 88 time-slot headers (A1 = "Name",
- * B1 onward = slot IDs).  Safe to re-run: it only writes headers into
- * row 1 and will not overwrite guest bookings in row 2+.
+ * Run once from the Apps Script editor: creates the "Availability" sheet
+ * with "Name" in A1 and freezes the header row / name column. Slot columns
+ * are added automatically by the first booking. Safe to re-run.
  */
+function initSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(AVAILABILITY_SHEET);
+  if (!sheet) sheet = ss.insertSheet(AVAILABILITY_SHEET);
+  if (String(sheet.getRange(1, 1).getValue()).trim() === "") {
+    sheet.getRange(1, 1).setValue("Name");
+  }
+  sheet.setFrozenRows(1);
+  sheet.setFrozenColumns(1);
+}
+
 /**
- * Run this to fully reset — deletes ALL guest bookings and re-creates headers.
+ * Full reset: deletes ALL bookings (and old date columns) and re-creates the sheet.
  */
 function resetSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(AVAILABILITY_SHEET);
   if (sheet) ss.deleteSheet(sheet);
   initSheet();
-}
-
-function initSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(AVAILABILITY_SHEET);
-  if (!sheet) {
-    sheet = ss.insertSheet(AVAILABILITY_SHEET);
-  }
-
-  var allSlots = getAllSlotIds();
-  var headerRow = ["Name"].concat(allSlots);
-
-  // Write the entire header row at once
-  sheet.getRange(1, 1, 1, headerRow.length).setValues([headerRow]);
-
-  // Freeze the header row and the name column for easier navigation
-  sheet.setFrozenRows(1);
-  sheet.setFrozenColumns(1);
 }
